@@ -1,0 +1,4 @@
+CHROM	POS	WEIR_AND_COCKERHAM_FST
+Astipes	10638	1
+Astipes	10654	nan
+Astipes	13559	nan
