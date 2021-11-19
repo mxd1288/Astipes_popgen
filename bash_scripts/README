@@ -1,0 +1,22 @@
+1. fastqc raw reads
+2. trim (adapters and quality) from raw reads (Trimmomatic, Nextera adapters)
+3. fastqc trimmed reads
+4. FLASH to combine overlapping reads
+5. combine extendedFrags, fwd unpaired, rev unpaired (i.e. all singletons) (cat)
+~ Make a mitogenome if you have enough reads ~ (GetOrganelle)
+6. align trimmed paired and single reads (bowtie2)
+7. Convert to bam files (samtools)
+8. filter bam files (samtools)
+9. clip overlapping reams (bamutil)
+10. remove duplicates (picard)
+11. coverage stats (optional)
+13. genotype likelihoods with ANGSD (diploids) or SNPs with Freebayes (haploids - i.e. mito)
+14. convert beagle genotype likelihood file to VCF/BCF
+14. PCA in plink with VCF/BCF (makes BED file and eigenvec/eigenval files) -- prune for LDs
+15. SAF with ANGSD (site allele frequencies) --> single pop and pairewise
+16. Use SAF to get SFS (site frequency spectrum) --> single pop and pairwise
+17. Use pairwise (2dsfs) for pairwise Fsts ANGSD
+18. Extract Fsts (global 'fst stats' and site specific 'fst print') with realSFS in ANGSD
+19. Admixture in ANGSD
+
+### plot using R script ###

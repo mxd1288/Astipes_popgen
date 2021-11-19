@@ -1,0 +1,17 @@
+#!/bin/bash
+#BSUB -P mbe326
+#BSUB -J 10x_mito
+#BSUB -q normal
+#BSUB -W 24:00
+#BSUB -n 8
+#BSUB -e /scratch/mbe326/MKD/err_and_out/10X_mito_assemble.err
+#BSUB -o /scratch/mbe326/MKD/err_and_out/10X_mito_assemble.out
+
+# Assembly HHsilverside mt_genome
+# call get_organelle_from_reads.py then give seedDB (close relative mito), R1, R2, local animal_mt DB, -R ?, -k kmers, -o output
+~/software/GetOrganelle/get_organelle_from_reads.py -s /home/mxd1288/software/GetOrganelleDB/0.0.0/SeedDatabase/menidia_JI_mito.fasta -1 /scratch/mbe326/MKD/adapter_clipped/CP-10Xind_Forward.fq.gz -2 /scratch/mbe326/MKD/adapter_clipped/CP-10Xind_Reverse.fq.gz \
+-t 1 -F animal_mt -R 10 -k 21,45,65,85,105 -o HH_10x_mito
+
+# Assembly Reef silverside mt_genome
+#~/software/GetOrganelle/get_organelle_from_reads.py -s menidia_JI_mito.fasta -1 reads.1.fq.gz -2 reads.2.fq.gz \
+#-t 1 -F animal_mt -R 10 -k 21,45,65,85,105 -o HH_reef_mito
