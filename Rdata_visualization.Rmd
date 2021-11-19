@@ -1,0 +1,519 @@
+---
+title: "Rdata_visualization"
+author: "Melissa Drown"
+date: "11/9/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+This is for analysis of Astipes data - SWS Fall 2021. 
+
+```{r #load packages}
+#install.packages("ggplot2")
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+```
+
+```{r #mito PCA}
+pca_coords <- read.table("astipes.eigenvec", sep=" ", header=FALSE)
+metadata <- read.csv("HHsilverside_WGS_samplesheet.csv", header=TRUE)
+
+# clean up metadata
+metadata <- metadata[c(1:81),]
+
+pca_meta_data <- full_join(metadata, pca_coords, by=c("sample_id"="V1"))
+
+ggplot(data=pca_meta_data) + 
+  geom_point(position="jitter", aes(V3, V4, col=population)) +
+  labs(x="PC1", y="PC2", title="Hardhead and Reef Silverside Mitogenome SNPs PCA") +
+  theme_bw()
+
+```
+```{r #subset only hardhead data}
+hardhead_subset <- filter(pca_meta_data, species=="hardhead")
+hardhead_subset <- filter(hardhead_subset, V3>0)
+
+ggplot(data=hardhead_subset) + 
+  geom_point(position="jitter", aes(V3, V4, col=population)) +
+  labs(x="PC1", y="PC2", title="Hardhead Silverside Mitogenome SNPs PCA") +
+  theme_bw()
+
+```
+
+```{r # mito fst data}
+setwd("~/Desktop/mito_fsts")
+# make list of files
+file_list <- list.files(path="~/Desktop/mito_fsts")
+
+# make empty data frame
+fst_dataset <- data.frame()
+
+# read in all files
+for (i in 1:length(file_list)){
+ fst_data <- read_tsv(file_list[i]) #each file will be read in
+ fst_data$file <- file_list[i]
+  fst_dataset <- rbind(fst_dataset, fst_data) #for each iteration, bind the new data to the building dataset
+}
+```
+
+
+```{r #clean up mito data}
+# remove comparisons between the same pops
+fst_dataset <- filter(fst_dataset, file!="broadkey_broadkey.weir.fst") %>%
+  filter(., file!="crandon_crandon.weir.fst" ) %>%
+    filter(., file!="reef_reef.weir.fst") %>%
+  filter(., file!="M87_pop_M87_pop.weir.fst") %>%
+  filter(., file!="M26_pop_M26_pop.weir.fst") %>%
+  filter(., file!="M61_pop_M61_pop.weir.fst")
+
+
+# make new columns with pop1 
+fst_broadkey <- fst_dataset[grep("^b", fst_dataset$file),] %>%
+  mutate(pop1="broadkey")
+fst_crandon <-fst_dataset[grep("^c", fst_dataset$file),] %>%
+  mutate(pop1="crandon")
+fst_reef <-fst_dataset[grep("^r", fst_dataset$file),] %>%
+  mutate(pop1="reef")
+fst_M26 <-fst_dataset[grep("^M26", fst_dataset$file),] %>%
+  mutate(pop1="M26")
+fst_M87 <-fst_dataset[grep("^M87", fst_dataset$file),] %>%
+  mutate(pop1="M87")
+fst_M61 <-fst_dataset[grep("^M61", fst_dataset$file),] %>%
+  mutate(pop1="M61")
+
+
+fst_data <- rbind(fst_broadkey, fst_crandon, fst_M26, fst_M61, fst_reef, fst_M87)
+
+```
+
+```{r plot mito fsts}
+# make numeric
+fst_dataset$WEIR_AND_COCKERHAM_FST <- as.numeric(fst_dataset$WEIR_AND_COCKERHAM_FST)
+
+# make a nice plot
+ggplot(fst_dataset) +
+  geom_point(aes(x=POS, y=WEIR_AND_COCKERHAM_FST, col=file)) +
+  facet_wrap(~file, ncol=6) +
+  theme_bw()
+
+```
+
+```{r # plot fst by chr. location}
+# remove redundant
+fst_data <- filter(fst_data,file!="broadkey_reef.weir.fst")
+fst_data <- filter(fst_data,file!="crandon_reef.weir.fst")
+fst_data <- filter(fst_data,file!="M26_pop_reef.weir.fst")
+fst_data <- filter(fst_data,file!="M61_pop_reef.weir.fst")
+fst_data <- filter(fst_data,file!="M87_pop_reef.weir.fst")
+
+fst_data <- filter(fst_data,file!="M26_pop_crandon.weir.fst")
+fst_data <- filter(fst_data,file!="M61_pop_crandon.weir.fst")
+fst_data <- filter(fst_data,file!="M87_pop_crandon.weir.fst")
+fst_data <- filter(fst_data,file!="M26_pop_broadkey.weir.fst")
+fst_data <- filter(fst_data,file!="M61_pop_broadkey.weir.fst")
+fst_data <- filter(fst_data,file!="M87_pop_broadkey.weir.fst")
+
+fst_data <- filter(fst_data,file!="crandon_broadkey.weir.fst")
+fst_data <- filter(fst_data,file!="M61_pop_M87_pop.weir.fst")
+fst_data <- filter(fst_data,file!="M61_pop_M26_pop.weir.fst")
+fst_data <- filter(fst_data,file!="M87_pop_M26_pop.weir.fst")
+
+# make a nice plot
+ggplot(fst_data) +
+  geom_point(aes(x=POS, y=WEIR_AND_COCKERHAM_FST, col=file)) +
+  facet_wrap(~file, ncol=5) +
+  scale_color_manual(values=c("darkblue","darkblue","darkblue","darkblue","purple","purple","purple","orange","orange","blue","coral","coral","coral","coral","coral")) +
+  theme_bw()
+```
+
+# VCF File Filtering
+```{r # plot missingness of mito snps}
+missing_indv <- read.table("~/Desktop/out.imiss", header=TRUE)
+
+# fraction of data present
+# bottom 5 are reef fish
+hist(missing_indv$F_MISS, breaks=40)
+abline(v=0.2, col="red")
+```
+```{r # plot missingness of mito snps}
+missing_sites <- read.table("~/Desktop/out.lmiss", header=TRUE)
+str(missing_sites)
+# fraction of data present
+# fraction data present
+hist(1-missing_sites$F_MISS, breaks=40)
+min(1-missing_sites$F_MISS) # all sites have at least 95.4% present
+#abline(v=0.2, col="red")
+```
+```{r}
+missing_indv2 <- read.table("~/Desktop/missing2.imiss", header=TRUE)
+
+# fraction of data present
+# bottom 5 are reef fish
+hist(missing_indv2$F_MISS, breaks=40)
+abline(v=0.05, col="red")
+```
+```{r}
+# missing per site
+missing_sites2 <- read.table("~/Desktop/missingsite2.lmiss", header=TRUE)
+hist(1-missing_sites2$F_MISS, breaks=40)
+
+```
+# PCA Mito After Filtering
+```{r Mito PCA after filtering}
+# new PCA after filtering SNPs
+pca_coords2 <- read.table("~/Desktop/mito_PCA_filtered/astipes_mito.eigenvec", sep=" ", header=FALSE)
+metadata <- read.csv("HHsilverside_WGS_samplesheet.csv", header=TRUE)
+pca_eigenvals <- read.table("~/Desktop/mito_PCA_filtered/astipes_mito.eigenval", sep=" ", header=FALSE)
+# clean up metadata
+metadata <- metadata[c(1:81),]
+
+pca_meta_data2 <- full_join(metadata, pca_coords2, by=c("sample_id"="V1"))
+
+# one individual M-33 is an ~outlier~
+# convert to percent variance explained (PVE)
+pca_eigenvals$PCA <- c("1","2","3","4","5","6","7","8","9","10")
+
+pca_eigenvals$V1 <- sort(pca_eigenvals$V1, decreasing = TRUE)
+
+panel1 <-ggplot(pca_eigenvals, aes(x=PCA, y=V1)) +
+  geom_bar(stat="identity") +
+  scale_x_discrete(limits=c("1", "2", "3","4","5","6","7","8","9","10")) +
+  theme_bw() +
+  labs(x="PC", y="% variance")
+
+panel2 <- ggplot(pca_meta_data2) +
+  geom_point(aes(x=V3, y=V4, col=population)) +
+  theme_bw() +
+  labs(x="PC1 - 42.4%", y="PC2 - 13%", title="Hardhead Silverside - Filtered Mito SNPs")
+
+#library(gridExtra)
+grid.arrange(panel1, panel2, nrow=1, widths=c(1,4))
+```
+# PCangsd from Genotype Likelihoods
+```{r # nuclear PCA}
+# output from pcangsd
+library(RcppCNPy)
+covs <- as.matrix(read.table("~/Desktop/pca250k.cov")) # Reads in estimated covariance matrix
+covs <- as.data.frame(covs)
+
+# get eigenvalues and vectors
+covs_eigen <- eigen(covs)
+
+# add metadata
+cov_eigen_vals <- covs_eigen$values
+cov_eigen_vecs <- as.data.frame(covs_eigen$vectors)
+
+# preliminary plot
+plot(cov_eigen_vecs$V1, cov_eigen_vecs$V2)
+
+# add metadata
+# sample IDs
+samps <- read.csv("~/Desktop/num_samples.csv", header=FALSE)
+colnames(samps) <- c("num","sample_id")
+
+# combine sampleIds with covs
+eigen_full <- cbind(cov_eigen_vecs, samps)
+
+# combine with metadata
+eigen_full <- full_join(metadata, eigen_full, by="sample_id")
+```
+
+```{r # nice PCA plot}
+cov_eigen_vals[2]
+
+ggplot(data=eigen_full) +
+  geom_point(aes(x=V1, y=V2, col=population.x)) +
+  labs(x="PC1 - 3.23%", y="PC2 - 0.92", title="PCAngsd - 250K nuclear GL") +
+  theme_bw()
+
+```
+
+# What K is best for admixture
+```{r #choose K}
+# read in list of likelihoods from admix .log files
+k_likes <- c(21104590.204792, 21104589.395525, 21104601.093928, 20943048.908796, 20942825.905206, 20942454.668371, 20786284.326662, 20785889.884670, 20790627.194903, 20630217.577088, 20634545.514508, 20627337.673463, 20478967.684953, 20476415.039346, 20475266.535372, 20329316.013558, 20320370.497037, 20322761.287689, 20174308.127090, 20169340.469355, 20169494.927094)
+
+#make a dataframe with an index 1:7, this corresponds to our K values
+logs<-data.frame(K = rep(1:7, each=3))
+
+#add to it our likelihood values
+logs$like<-as.vector(k_likes)
+
+#and now we can calculate our delta K and probability
+tapply(logs$like, logs$K, FUN= function(x) mean(abs(x))/sd(abs(x)))
+
+```
+# Site frequency spectrums
+```{r #plot SFS}
+# plot sfs and calc heterozygosity
+
+cp_sfs<-scan("~/Desktop/astipes_sfs/cp_out.sfs")
+barplot(cp_sfs[-1])
+cp_sfs[2]/sum(cp_sfs) # 0.001480604
+
+bk_sfs<-scan("~/Desktop/astipes_sfs/bk_out.sfs")
+barplot(bk_sfs[-1])
+bk_sfs[2]/sum(bk_sfs) # 0.0009660726
+
+m26_sfs<-scan("~/Desktop/astipes_sfs/m26_out.sfs")
+barplot(m26_sfs[-1])
+m26_sfs[2]/sum(m26_sfs) # 0.001417816
+
+m61_sfs<-scan("~/Desktop/astipes_sfs/M61_out.sfs")
+barplot(m61_sfs[-1])
+m61_sfs[2]/sum(m61_sfs) # 0.001291328
+
+m87_sfs<-scan("~/Desktop/astipes_sfs/M87_out.sfs")
+barplot(m87_sfs[-1])
+m87_sfs[2]/sum(m87_sfs) # 0.001182149
+```
+```{r #2d sfs}
+bk_m26 <- scan("~/Desktop/astipes_sfs/ml/BK.M26.ml")
+bk_m61 <- scan("~/Desktop/astipes_sfs/ml/BK.M61.ml")
+bk_m87 <- scan("~/Desktop/astipes_sfs/ml/BK.M87.ml")
+cp_bk <- scan("~/Desktop/astipes_sfs/ml/cp.bk.ml")
+cp_m87 <- scan("~/Desktop/astipes_sfs/ml/cp.M87.ml")
+cp_m26 <- scan("~/Desktop/astipes_sfs/ml/cp.M26.ml")
+cp_m61 <- scan("~/Desktop/astipes_sfs/ml/cp.M61.ml")
+m26_m87 <- scan("~/Desktop/astipes_sfs/ml/m26.m87.ml") # not done
+m61_m26 <- scan("~/Desktop/astipes_sfs/ml/m61.m26.ml") # not done
+m61_m87 <- scan("~/Desktop/astipes_sfs/ml/m61.m87.ml")
+
+```
+```{r}
+barplot(bk_m26[-1], ylim=c(0,2000), xlim=c(100,200))
+barplot(bk_m61[-1])
+barplot(bk_m87[-1])
+barplot(cp_bk[-1])
+barplot(cp_m26[-1])
+barplot(cp_m87[-1])
+barplot(cp_m61[-1])
+barplot(m61_m87[-1])
+```
+# Fst from Nuclear Data
+```{r}
+# library(dplyr)
+# library(tidyverse)
+# library(ggplot2)
+bk_m61_fst <- read_tsv("~/Desktop/astipes_fst/bk_m61_fst_calc.txt", col_names=FALSE)
+str(bk_m61_fst) # look at data structure
+colnames(bk_m61_fst) <- c("contig","pos","a", "b", "fst") # rename cols
+unique(bk_m61_fst$contig) # num unique contigs
+
+# make plots
+hist(bk_m61_fst$fst, breaks=100, ylim=c(0, 50)) # distribution of Fsts
+barplot(bk_m61_fst$fst, bk_m61_fst$pos) # manhattan plot
+
+# plot by contig
+ggplot(data=bk_m61_fst) +
+  geom_point(aes(x=pos, y=fst)) +
+  facet_wrap(~contig)
+
+filter(bk_m61_fst, fst>0.0831)
+```
+```{r}
+setwd("~/Desktop/astipes_fst")
+# make list of files
+file_list <- list.files(path="~/Desktop/astipes_fst")
+
+# make empty data frame
+fst_nuclear <- data.frame()
+
+# read in all files
+for (i in 1:length(file_list)){
+ fst_nuc <- read_tsv(file_list[i], col_names=FALSE) #each file will be read in
+ fst_nuc$file <- file_list[i]
+  fst_nuclear <- rbind(fst_nuc, fst_nuclear) #for each iteration, bind the new data to the building dataset
+}
+```
+```{r}
+colnames(fst_nuclear) <- c("contig","pos","a","b","fst", "file")
+head(fst_nuclear)
+
+plot(fst_nuclear$fst, fst_nuclear$pos)
+
+# cutoff of  1e-05
+ggplot(data=fst_nuclear) +
+  geom_point(aes(x=pos, y=fst), pch=1) +
+  geom_hline(yintercept=quantile(fst_nuclear$fst, 0.99999), linetype="dashed", color="red") +
+  facet_wrap(~file)
+
+hist(fst_nuclear$fst)
+```
+
+```{r # what size are these contigs}
+# look at chrom size, calculated from character count of individual fasta files for each contig
+chrom_size <- read.csv("~/Desktop/chrom_size.csv", header=TRUE)
+
+hist(chrom_size$characters, xlim=c(0,1500000), breaks=14000)
+mean(chrom_size$characters) # 168938.2
+sd(chrom_size$characters) # 10216576
+max(chrom_size$characters) # 1235191522
+min(chrom_size$characters) # 309
+
+subset(chrom_size, chrom_size$contig=="contig_10000_pilon_pilon_pilon_pilon.fa") #25,157
+subset(chrom_size, chrom_size$contig=="contig_10001_pilon_pilon_pilon_pilon.fa") # 124,251
+subset(chrom_size, chrom_size$contig=="contig_10002_pilon_pilon_pilon_pilon.fa") # 250,486
+subset(chrom_size, chrom_size$contig=="contig_10007_pilon_pilon_pilon_pilon.fa") # 192,914
+subset(chrom_size, chrom_size$contig=="contig_10008_pilon_pilon_pilon_pilon.fa") # 399,606
+subset(chrom_size, chrom_size$contig=="contig_10010_pilon_pilon_pilon_pilon.fa") # 160,502
+subset(chrom_size, chrom_size$contig=="contig_10013_pilon_pilon_pilon_pilon.fa") # 80,250
+```
+# Plink Nuclear PCA
+```{r # plink PCA from nuclear}
+# not pruned
+pca_vecs <- read.table("~/Desktop/astipes_plink_pca/HH_complete_pca.eigenvec", sep=" ", header=FALSE)
+pca_vals <- read.table("~/Desktop/astipes_plink_pca/HH_complete_pca.eigenval", sep=" ", header=FALSE)
+
+pca_vecs <- pca_vecs[,-1]
+
+
+# pruned
+pca_vecs_prune <- read.table("~/Desktop/astipes_plink_pca/HH_pruned_pca.eigenvec", sep=" ", header=FALSE)
+pca_val_prune <- read.table("~/Desktop/astipes_plink_pca/HH_pruned_pca.eigenval", sep=" ", header=FALSE)
+pca_vecs_prune <- pca_vecs_prune[,-1]
+
+# add metadata
+# sample IDs
+samps <- read.csv("~/Desktop/num_samples.csv", header=FALSE)
+colnames(samps) <- c("num","sample_id")
+
+# combine sampleIds with covs
+full_nuc <- cbind(pca_vecs, samps)
+full_nuc_pruned <- cbind(pca_vecs_prune, samps)
+
+# combine with metadata
+pca_data <- full_join(metadata, full_nuc, by="sample_id")
+pca_data_pruned <- full_join(metadata, full_nuc_pruned, by="sample_id")
+
+# do not contain % var explained!!!
+# convert o PVE
+pca_vals <- data.frame(PC = 1:20, pve = pca_vals/sum(pca_vals)*100)
+pca_val_prune <- data.frame(PC = 1:20, pve = pca_val_prune/sum(pca_val_prune)*100)
+pca_val_prune
+
+ggplot(pca_vals, aes(PC, V1)) + geom_bar(stat = "identity") +
+  ylab("Percentage variance explained") + theme_light()
+
+ggplot(pca_val_prune, aes(PC, V1)) + geom_bar(stat = "identity") +
+  ylab("Percentage variance explained") + theme_light()
+
+ggplot(data=pca_data) +
+  geom_point(aes(x=V3, y=V4, col=population), size=2.5) + coord_equal() +
+  theme_bw() +
+  stat_ellipse(aes(x=V3, y=V4, col=population), size=0.5) +
+  labs(x="PC1 - 16.25%", y="PC2 - 7.22%")
+  
+ggplot(data=pca_data_pruned) +
+  geom_point(aes(x=V3, y=V4, col=population), size=2.5) +
+  stat_ellipse(aes(x=V3, y=V4, col=population), size=0.5) +
+  theme_bw() +
+  labs(x="PC1 - 16.04%", y="PC2 - 7.28%")
+```
+```{r # pca without reefs}
+# not pruned
+pca_vecs <- read.table("~/Desktop/astipes_plink_pca/HH_noR_pca.eigenvec", sep=" ", header=FALSE)
+pca_vals <- read.table("~/Desktop/astipes_plink_pca/HH_noR_pca.eigenval", sep=" ", header=FALSE)
+
+pca_vecs <- pca_vecs[,-1]
+
+
+# pruned
+pca_vecs_prune <- read.table("~/Desktop/astipes_plink_pca/HH_noR_pruned_pca.eigenvec", sep=" ", header=FALSE)
+pca_val_prune <- read.table("~/Desktop/astipes_plink_pca/HH_noR_pruned_pca.eigenval", sep=" ", header=FALSE)
+pca_vecs_prune <- pca_vecs_prune[,-1]
+
+# add metadata
+# sample IDs
+samps <- read.csv("~/Desktop/num_samples.csv", header=FALSE)
+colnames(samps) <- c("num","sample_id")
+
+samps_noR <- samps[1:75, ]
+
+# combine sampleIds with covs
+full_nuc <- cbind(pca_vecs, samps_noR)
+full_nuc_pruned <- cbind(pca_vecs_prune, samps_noR)
+
+# combine with metadata
+pca_data <- full_join(metadata, full_nuc, by="sample_id")
+pca_data_pruned <- full_join(metadata, full_nuc_pruned, by="sample_id")
+
+# do not contain % var explained!!!
+# convert o PVE
+pca_vals <- data.frame(PC = 1:20, pve = pca_vals/sum(pca_vals)*100)
+pca_val_prune <- data.frame(PC = 1:20, pve = pca_val_prune/sum(pca_val_prune)*100)
+pca_vals
+pca_val_prune
+
+ggplot(pca_vals, aes(PC, V1)) + geom_bar(stat = "identity") +
+  ylab("Percentage variance explained") + theme_light()
+
+ggplot(pca_val_prune, aes(PC, V1)) + geom_bar(stat = "identity") +
+  ylab("Percentage variance explained") + theme_light()
+
+ggplot(data=pca_data) +
+  geom_point(aes(x=V3, y=V4, col=population), size=2.5) + coord_equal() +
+  theme_bw() +
+  stat_ellipse(aes(x=V3, y=V4, col=population), size=0.5) +
+  labs(x="PC1 - 9.20%", y="PC2 - 5.31%")
+  
+ggplot(data=pca_data_pruned) +
+  geom_point(aes(x=V3, y=V4, col=population), size=2.5) +
+  stat_ellipse(aes(x=V3, y=V4, col=population), size=0.5) +
+  theme_bw() + 
+  labs(x="PC1 - 9.15%", y="PC2 - 5.14%")
+
+ggplot(data=pca_data) +
+  geom_point(aes(x=V4, y=V5, col=population), size=2.5) + coord_equal() +
+  theme_bw() +
+  labs(x="PC2 - 5.31%", y="PC3 - 5.04%")
+  
+ggplot(data=pca_data_pruned) +
+  geom_point(aes(x=V4, y=V5, col=population), size=2.5) +
+  theme_bw() +
+  labs(x="PC2 - 5.14%", y="PC3 - 4.94%")
+
+```
+# Fst Correl matrix
+```{r}
+library(corrplot)
+
+fst_cor <- read.csv("~/Desktop/astipes_fst_cor.csv")
+
+# make first column into rownames
+fst2 <- fst_cor[,-1]
+rownames(fst2) <- fst_cor[,1]
+
+# making a matrix
+M <- as.matrix(fst2)
+
+# make cor plot
+corrplot(M, method="number", type="upper", is.corr=FALSE, title="Pairwise Fst")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
