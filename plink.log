@@ -1,0 +1,25 @@
+PLINK v1.90p 64-bit (16 Jun 2020)
+Options in effect:
+  --allow-extra-chr
+  --bfile astipes
+  --pca
+
+Hostname: MacBook-Pro.local
+Working directory: /Users/melissadrown/Desktop
+Start time: Tue Nov  9 08:39:59 2021
+
+Random number seed: 1636465199
+16384 MB RAM detected; reserving 8192 MB for main workspace.
+1044 variants loaded from .bim file.
+79 people (0 males, 0 females, 79 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to plink.nosex .
+Using up to 8 threads (change this with --threads).
+Before main variant filters, 79 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.925033.
+1044 variants and 79 people pass filters and QC.
+Note: No phenotypes present.
+Relationship matrix calculation complete.
+--pca: Results saved to plink.eigenval and plink.eigenvec .
+
+End time: Tue Nov  9 08:39:59 2021
