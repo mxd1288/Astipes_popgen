@@ -1,6 +1,6 @@
 # Astipes_popgen
 Population genetics analysis of Hardhead silverside 
-Saltwater semester Fall 2021
+Fall 2021
 
 Bash_scripts contains individual README file and scripts for processing raw low-coverage whole genome sequencing data from illumina hi-seq.
 Scripts for admixture and mitogenome assembly are also included in Bash_scripts folder.
